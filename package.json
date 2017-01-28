@@ -1,0 +1,17 @@
+{
+  "name": "start-spawn",
+  "version": "0.0.0",
+  "description": "Start task to spawn a script/task/command using cross-spawn",
+  "main": "index.js",
+  "files": [],
+  "repository": "laggingreflex/start-spawn",
+  "dependencies": {
+    "cross-spawn-promise": "^0.9.1"
+  },
+  "keywords": [
+    "start",
+    "start-task",
+    "spawn",
+    "cross-spawn"
+  ]
+}
