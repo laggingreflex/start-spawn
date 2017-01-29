@@ -78,6 +78,18 @@ runTask.killer = killer; // by configuring
 ```
 It uses `done` callback or awaits a returned promise to wait for it to completely exit.
 
+### Options
+
+Takes same options as spawn, cross-spawn, and cross-spawn-promise.
+
+#### Additional options:
+
+##### `forever` (boolean|number) (default: false)
+
+Restarts if an error occurs, either indefinitely (if `true`) or a set `number` of times.
+
+## Issues
+
 If you have a server app in a watch-spawn cycle but you're still getting `EADDRINUSE` errors, make sure your app closes the server on any kill signals:
 
 ```js
