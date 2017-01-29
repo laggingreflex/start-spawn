@@ -1,10 +1,13 @@
 module.exports = (cmd, args = [], opts = {}) => {
+  const { platform } = require('os');
+  const { join } = require('path');
+  const { cwd } = process;
+  const crossSpawn = require('cross-spawn-promise')
+  const kill = require('tree-kill')
 
-  let cleanup = () => {};
+  let cleanup = () => Promise.resolve();
 
   const task = (input) => {
-
-    cleanup();
 
     if (!cmd || typeof cmd !== 'string') {
       throw new Error('Need a command as string');
@@ -19,52 +22,53 @@ module.exports = (cmd, args = [], opts = {}) => {
       [cmd, ...args] = cmd.split(/ +/g);
     }
 
-    return function run(log, reporter) {
-      const { platform } = require('os');
-      const { join } = require('path');
-      const { cwd } = process;
-      const spawn = require('cross-spawn-promise')
+    if (!opts.env || !opts.env.PATH) {
+      opts.env = opts.env || Object.assign({}, process.env);
+      opts.env.PATH = opts.env.PATH || process.env.PATH || '';
+      opts.env.PATH = join(cwd(), 'node_modules', '.bin') + (platform() === 'win32' ? ';' : ':') + opts.env.PATH;
+    }
 
-      if (!opts.env || !opts.env.PATH) {
-        opts.env = opts.env || Object.assign({}, process.env);
-        opts.env.PATH = opts.env.PATH || process.env.PATH || '';
-        opts.env.PATH = join(cwd(), 'node_modules', '.bin') + (platform() === 'win32' ? ';' : ':') + opts.env.PATH;
-      }
+    Object.assign(opts, {
+      shell: true,
+      stdio: 'pipe',
+      encoding: 'utf8',
+    });
 
-      Object.assign(opts, {
-        shell: true,
-        stdio: 'pipe',
-        encoding: 'utf8',
-      });
+    return function spawn(log, reporter) {
 
-      const cpPromise = spawn(cmd, args, opts);
-      const cp = cpPromise.childProcess;
-      if (cp.stdout) {
-        cp.stdout.on('data', log);
-      }
-      const errLog = msg => log('error', msg);
-      if (cp.stderr) {
-        cp.stderr.on('data', errLog);
-      }
-      let postCleanup = false;
-      cleanup = () => {
-        postCleanup = true;
+      return cleanup().then(() => {
+        const cpPromise = crossSpawn(cmd, args, opts);
+        const cp = cpPromise.childProcess;
         if (cp.stdout) {
-          cp.stdout.removeListener('data', log);
+          cp.stdout.on('data', log);
         }
+        const errLog = msg => log('error', msg);
         if (cp.stderr) {
-          cp.stderr.removeListener('data', errLog);
+          cp.stderr.on('data', errLog);
         }
-        try { cp.kill('SIGHUP') } catch (err) {}
-        try { cp.kill('SIGTERM') } catch (err) {}
-        try { cp.kill('SIGINT') } catch (err) {}
-      };
-      return cpPromise.catch(err => {
-        if (postCleanup) {
-          return;
-        } else {
-          throw err;
-        }
+        let postCleanup = false;
+        const returnPromise = cpPromise.catch(err => {
+          if (postCleanup) {
+            return;
+          } else {
+            throw err;
+          }
+        });
+        cleanup = () => {
+          postCleanup = true;
+          if (cp.stdout) {
+            cp.stdout.removeListener('data', log);
+          }
+          if (cp.stderr) {
+            cp.stderr.removeListener('data', errLog);
+          }
+          return new Promise(resolve => {
+            kill(cp.pid, 'SIGTERM', () => {
+              returnPromise.then(resolve);
+            });
+          });
+        };
+        return returnPromise;
       });
     };
   }
