@@ -1,6 +1,6 @@
 {
   "name": "start-spawn",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Start task to spawn a script/task/command using cross-spawn",
   "main": "index.js",
   "files": [],
