@@ -62,23 +62,23 @@ export const someOther = () => start(
   }
 );
 ```
-
-It send a `'SIGTERM'` signal and uses [tree-kill] by default, both of which you can customize:
+By default it kills the child process with a `'SIGTERM'` signal, but you can provide any other signal, or customize the killer function itself:
 
 [tree-kill]: https://github.com/pkrumins/node-tree-kill
 
 ```js
-const killer = (pid, signal, callback) => {
-  // your killing code
-  process.kill(pid, signal);
-  callback();
+import treeKill from 'tree-kill';
+const killer = (pid, signal, done) => {
+  treeKill(pid, signal, done);
 }
-runTask.kill('SIGTERM', killer);
+runTask.kill('SIGTERM', killer); // by argument
+// or
+runTask.killer = killer; // by configuring
+// (in case you just want to alter the function that it'll automatically call)
 ```
-The `callback` is necessary because kill function returns a promise in case you want to wait till you're sure the process is terminated.
+It uses `done` callback or awaits a returned promise to wait for it to completely exit.
 
-
-If you have a server app in a watch-spawn cycle (which should automatically kill the previous instance) but you're getting `EADDRINUSE` errors, make sure your app closes the server on any kill signals:
+If you have a server app in a watch-spawn cycle but you're still getting `EADDRINUSE` errors, make sure your app closes the server on any kill signals:
 
 ```js
 const app = new Koa();

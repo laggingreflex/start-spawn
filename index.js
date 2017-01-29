@@ -3,9 +3,10 @@ module.exports = (cmd, args = [], opts = {}) => {
   const { join } = require('path');
   const { cwd } = process;
   const crossSpawn = require('cross-spawn-promise')
-  const kill = require('tree-kill')
 
   let cleanup = () => Promise.resolve();
+
+  let configurableKiller;
 
   const task = (input) => {
 
@@ -54,7 +55,8 @@ module.exports = (cmd, args = [], opts = {}) => {
             throw err;
           }
         });
-        cleanup = (KILL_SIGNAL = 'SIGTERM', killer = kill) => {
+        const defaultKiller = (pid, sig) => cp.kill(sig);
+        cleanup = (KILL_SIGNAL = 'SIGTERM', argKiller) => {
           postCleanup = true;
           if (cp.stdout) {
             cp.stdout.removeListener('data', log);
@@ -62,10 +64,20 @@ module.exports = (cmd, args = [], opts = {}) => {
           if (cp.stderr) {
             cp.stderr.removeListener('data', errLog);
           }
-          return new Promise(resolve => {
-            killer(cp.pid, KILL_SIGNAL, () => {
-              returnPromise.then(resolve);
-            });
+          return new Promise((resolve, reject) => {
+            const cb = (err) => err ? reject(err) : returnPromise.then(resolve);
+            let killPromise;
+            const killer = argKiller || configurableKiller || defaultKiller;
+            try {
+              killPromise = killer(cp.pid, KILL_SIGNAL, cb);
+            } catch (err) {
+              return reject(err);
+            }
+            if (killPromise && killPromise.then) {
+              killPromise.then(() => returnPromise).then(resolve).catch(reject);
+            } else if (!killer.length || killer.length < 3) {
+              resolve();
+            }
           });
         };
         return returnPromise;
@@ -73,9 +85,11 @@ module.exports = (cmd, args = [], opts = {}) => {
     };
   }
 
-  const getter = { get: () => cleanup };
-  Object.defineProperty(task, 'cleanup', getter);
-  Object.defineProperty(task, 'kill', getter);
+  const cleanupGetter = { get: () => cleanup };
+  Object.defineProperty(task, 'cleanup', cleanupGetter);
+  Object.defineProperty(task, 'kill', cleanupGetter);
+
+  Object.defineProperty(task, 'killer', { set: (killer) => configurableKiller = killer });
 
   return task;
 

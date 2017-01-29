@@ -6,8 +6,7 @@
   "files": [],
   "repository": "laggingreflex/start-spawn",
   "dependencies": {
-    "cross-spawn-promise": "^0.9.1",
-    "tree-kill": "^1.1.0"
+    "cross-spawn-promise": "^0.9.1"
   },
   "keywords": [
     "start",
