@@ -54,7 +54,7 @@ module.exports = (cmd, args = [], opts = {}) => {
             throw err;
           }
         });
-        cleanup = () => {
+        cleanup = (KILL_SIGNAL = 'SIGTERM', killer = kill) => {
           postCleanup = true;
           if (cp.stdout) {
             cp.stdout.removeListener('data', log);
@@ -63,7 +63,7 @@ module.exports = (cmd, args = [], opts = {}) => {
             cp.stderr.removeListener('data', errLog);
           }
           return new Promise(resolve => {
-            kill(cp.pid, 'SIGTERM', () => {
+            killer(cp.pid, KILL_SIGNAL, () => {
               returnPromise.then(resolve);
             });
           });
