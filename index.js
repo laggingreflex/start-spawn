@@ -68,7 +68,7 @@ module.exports = (cmd, args, opts) => {
         if (cp.stdout) {
           cp.stdout.on('data', stdout);
         }
-        const stderr = msg => log('error', pidStr + ' ' + msg);
+        const stderr = msg => log(pidStr + ' ' + msg);
         if (cp.stderr) {
           cp.stderr.on('data', stderr);
         }
@@ -104,7 +104,7 @@ module.exports = (cmd, args, opts) => {
             const errMsg = `Couldn't kill ` + pidMsgStr;
             const sucMsg = 'Killed  ' + pidMsgStr;
             try {
-              log('Killing ' + pidMsgStr + '...');
+              // log('Killing ' + pidMsgStr + '...');
               killPromise = killer(cp.pid, KILL_SIGNAL, cb);
             } catch (err) {
               err.message = errMsg + ' ' + err.message;
