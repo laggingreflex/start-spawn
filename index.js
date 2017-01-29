@@ -38,20 +38,29 @@ module.exports = (cmd, args = [], opts = {}) => {
     return function spawn(log, reporter) {
 
       return cleanup().then(() => {
+        const cmdStr = '(' + cmd + ' ' + args.join(' ') + ')';
+        log('Starting ' + cmdStr);
         const cpPromise = crossSpawn(cmd, args, opts);
         const cp = cpPromise.childProcess;
+        const pidStr = `[PID:${cp.pid}]`;
+        const pidMsgStr = pidStr + cmdStr;
+        log('Started ' + pidMsgStr);
+        const stdout = msg => log(pidStr + ' ' + msg);
         if (cp.stdout) {
-          cp.stdout.on('data', log);
+          cp.stdout.on('data', stdout);
         }
-        const errLog = msg => log('error', msg);
+        const stderr = msg => log('error', pidStr + ' ' + msg);
         if (cp.stderr) {
-          cp.stderr.on('data', errLog);
+          cp.stderr.on('data', stderr);
         }
         let postCleanup = false;
-        const returnPromise = cpPromise.catch(err => {
+        const returnPromise = cpPromise.then(() => {
+          log('Exited ' + pidMsgStr);
+        }).catch(err => {
           if (postCleanup) {
             return;
           } else {
+            err.message = 'Exited with error ' + pidMsgStr + ' ' + err.message;
             throw err;
           }
         });
@@ -59,23 +68,34 @@ module.exports = (cmd, args = [], opts = {}) => {
         cleanup = (KILL_SIGNAL = 'SIGTERM', argKiller) => {
           postCleanup = true;
           if (cp.stdout) {
-            cp.stdout.removeListener('data', log);
+            cp.stdout.removeListener('data', stdout);
           }
           if (cp.stderr) {
-            cp.stderr.removeListener('data', errLog);
+            cp.stderr.removeListener('data', stderr);
           }
           return new Promise((resolve, reject) => {
             const cb = (err) => err ? reject(err) : returnPromise.then(resolve);
             let killPromise;
             const killer = argKiller || configurableKiller || defaultKiller;
+            const errMsg = `Couldn't kill ` + pidMsgStr;
+            const sucMsg = 'Killed  ' + pidMsgStr;
             try {
+              log('Killing ' + pidMsgStr + '...');
               killPromise = killer(cp.pid, KILL_SIGNAL, cb);
             } catch (err) {
+              err.message = errMsg + ' ' + err.message;
               return reject(err);
             }
             if (killPromise && killPromise.then) {
-              killPromise.then(() => returnPromise).then(resolve).catch(reject);
+              killPromise.then(() => returnPromise).then(() => {
+                log(sucMsg);
+                resolve();
+              }).catch(err => {
+                err.message = errMsg + ' ' + err.message
+                reject(err);
+              });
             } else if (!killer.length || killer.length < 3) {
+              log(sucMsg);
               resolve();
             }
           });
