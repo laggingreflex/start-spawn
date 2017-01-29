@@ -1,3 +1,6 @@
+// const defaultKillSig = 'SIGTERM';
+const defaultKillSig = 'SIGINT';
+
 module.exports = (cmd, args, opts) => {
   const { platform } = require('os');
   const { join } = require('path');
@@ -7,6 +10,7 @@ module.exports = (cmd, args, opts) => {
   let cleanup = () => Promise.resolve();
 
   let configurableKiller;
+  let configurableKillSig;
 
   let nodeBinpathAdded = false;
   const addNodeBinPath = () => {
@@ -104,7 +108,7 @@ module.exports = (cmd, args, opts) => {
           }
         }).then(removeListeners);
         const defaultKiller = (pid, sig) => cp.kill(sig);
-        cleanup = (KILL_SIGNAL = 'SIGTERM', argKiller) => {
+        cleanup = (argKillSig, argKiller) => {
           postCleanup = true;
           return new Promise((resolve, reject) => {
             const cb = (err) => {
@@ -120,11 +124,12 @@ module.exports = (cmd, args, opts) => {
             }
             let killPromise;
             const killer = argKiller || configurableKiller || defaultKiller;
+            const killSig = argKillSig || configurableKillSig || defaultKillSig;
             const errMsg = `Couldn't kill ` + pidMsgStr;
             const sucMsg = 'Killed  ' + pidMsgStr;
             try {
               // log('Killing ' + pidMsgStr + '...');
-              killPromise = killer(cp.pid, KILL_SIGNAL, cb);
+              killPromise = killer(cp.pid, killSig, cb);
             } catch (err) {
               err.message = errMsg + ' ' + err.message;
               return reject(err);
@@ -156,6 +161,7 @@ module.exports = (cmd, args, opts) => {
   Object.defineProperty(task, 'kill', cleanupGetter);
 
   Object.defineProperty(task, 'killer', { set: (killer) => configurableKiller = killer });
+  Object.defineProperty(task, 'killSig', { set: (sig) => configurablekillSig = sig });
 
   return task;
 
