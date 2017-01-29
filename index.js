@@ -8,6 +8,16 @@ module.exports = (cmd, args, opts) => {
 
   let configurableKiller;
 
+  let nodeBinpathAdded = false;
+  const addNodeBinPath = () => {
+    if (nodeBinpathAdded) return;
+    nodeBinpathAdded = true;
+    if (opts.env && opts.env.PATH) return;
+    opts.env = opts.env || Object.assign({}, process.env);
+    opts.env.PATH = opts.env.PATH || process.env.PATH || '';
+    opts.env.PATH = join(cwd(), 'node_modules', '.bin') + (platform() === 'win32' ? ';' : ':') + opts.env.PATH;
+  }
+
   const task = (input) => {
 
     if (!cmd || typeof cmd !== 'string') {
@@ -37,14 +47,8 @@ module.exports = (cmd, args, opts) => {
     });
 
     return function spawn(log, reporter) {
-
-      if (!opts.env || !opts.env.PATH) {
-        opts.env = opts.env || Object.assign({}, process.env);
-        opts.env.PATH = opts.env.PATH || process.env.PATH || '';
-        opts.env.PATH = join(cwd(), 'node_modules', '.bin') + (platform() === 'win32' ? ';' : ':') + opts.env.PATH;
-      }
-
       return cleanup().then(() => {
+        addNodeBinPath();
         const cmdStr = '(' + cmd + ' ' + args.join(' ') + ')';
         log('Starting ' + cmdStr);
         const cpPromise = crossSpawn(cmd, args, opts);
