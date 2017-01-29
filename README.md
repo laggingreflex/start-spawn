@@ -46,7 +46,9 @@ export const dev = () => start(
 ) );
 ```
 
-This way when the same task is run it automatically kills previously spawned process and cleans up any event listeneres. It also returns the cleanup function in case you want to do it manually.
+This way when the same task is run it automatically kills previously spawned process and cleans up any event listeneres.
+
+It also returns the cleanup function in case you want to do it manually.
 
 ```js
 const runTask = spawn('node ./server.js');
@@ -59,4 +61,27 @@ export const someOther = () => start(
     return start(someOtherTask)
   }
 );
+```
+
+It send a `'SIGTERM'` signal and uses [tree-kill] by default, both of which you can customize:
+
+[tree-kill]: https://github.com/pkrumins/node-tree-kill
+
+```js
+const killer = (pid, signal, callback) => {
+  // your killing code
+  process.kill(pid, signal);
+  callback();
+}
+runTask.kill('SIGTERM', killer);
+```
+The `callback` is necessary because kill function returns a promise in case you want to wait till you're sure the process is terminated.
+
+
+If you have a server app in a watch-spawn cycle (which should automatically kill the previous instance) but you're getting `EADDRINUSE` errors, make sure your app closes the server on any kill signals:
+
+```js
+const app = new Koa();
+//...
+process.once('SIGTERM', () => app.server.close());
 ```
