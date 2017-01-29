@@ -47,10 +47,18 @@ module.exports = (cmd, args, opts) => {
     });
 
     return function spawn(log, reporter) {
-      return cleanup().then(() => {
+      return cleanup().then(function restart(count = 0) {
         addNodeBinPath();
         const cmdStr = '(' + cmd + ' ' + args.join(' ') + ')';
-        log('Starting ' + cmdStr);
+        if (count) {
+          if (typeof opts.forever === 'number' && opts.forever >= count) {
+            throw new Error(`Couldn't restart ` + cmdStr + ` Maximum retries exceeded (${opts.forever}>=${count})`);
+          } else {
+            log(`Restarting (${count}) ` + cmdStr);
+          }
+        } else {
+          log('Starting ' + cmdStr);
+        }
         const cpPromise = crossSpawn(cmd, args, opts);
         const cp = cpPromise.childProcess;
         const pidStr = `[PID:${cp.pid}]`;
@@ -72,7 +80,12 @@ module.exports = (cmd, args, opts) => {
             return;
           } else {
             err.message = 'Exited with error ' + pidMsgStr + ' ' + err.message;
-            throw err;
+            if (opts.forever) {
+              log(err.message);
+              return restart(++count);
+            } else {
+              throw err;
+            }
           }
         });
         const defaultKiller = (pid, sig) => cp.kill(sig);
