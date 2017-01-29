@@ -1,4 +1,4 @@
-module.exports = (cmd, args = [], opts = {}) => {
+module.exports = (cmd, args, opts) => {
   const { platform } = require('os');
   const { join } = require('path');
   const { cwd } = process;
@@ -19,14 +19,15 @@ module.exports = (cmd, args = [], opts = {}) => {
       args = [];
     }
 
-    if (cmd.indexOf(' ') > 0 && !args.length) {
-      [cmd, ...args] = cmd.split(/ +/g);
+    if (!args) {
+      args = [];
+    }
+    if (!opts) {
+      opts = {};
     }
 
-    if (!opts.env || !opts.env.PATH) {
-      opts.env = opts.env || Object.assign({}, process.env);
-      opts.env.PATH = opts.env.PATH || process.env.PATH || '';
-      opts.env.PATH = join(cwd(), 'node_modules', '.bin') + (platform() === 'win32' ? ';' : ':') + opts.env.PATH;
+    if (cmd.indexOf(' ') > 0 && !args.length) {
+      [cmd, ...args] = cmd.split(/ +/g);
     }
 
     Object.assign(opts, {
@@ -36,6 +37,12 @@ module.exports = (cmd, args = [], opts = {}) => {
     });
 
     return function spawn(log, reporter) {
+
+      if (!opts.env || !opts.env.PATH) {
+        opts.env = opts.env || Object.assign({}, process.env);
+        opts.env.PATH = opts.env.PATH || process.env.PATH || '';
+        opts.env.PATH = join(cwd(), 'node_modules', '.bin') + (platform() === 'win32' ? ';' : ':') + opts.env.PATH;
+      }
 
       return cleanup().then(() => {
         const cmdStr = '(' + cmd + ' ' + args.join(' ') + ')';
