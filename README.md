@@ -62,9 +62,7 @@ export const someOther = () => start(
   }
 );
 ```
-By default it kills the child process with a `'SIGTERM'` signal, but you can provide any other signal, or customize the killer function itself:
-
-[tree-kill]: https://github.com/pkrumins/node-tree-kill
+By default it kills the child process using [tree-kill]\* with a `'SIGTERM'` signal, but you can provide any other signal, or customize the killer function itself:
 
 ```js
 import treeKill from 'tree-kill';
@@ -76,7 +74,13 @@ runTask.kill('SIGTERM', killer); // by argument
 runTask.killer = killer; // by configuring
 // (in case you just want to alter the function that it'll automatically call)
 ```
-It uses `done` callback or awaits a returned promise to wait for it to completely exit.
+It waits for `done` callback or awaits a returned promise to wait for it to completely exit.
+
+<sup>\*because [child.kill() alone doesn't kill shell-spawned processes][cp.kill]</sup>
+
+[tree-kill]: https://github.com/pkrumins/node-tree-kill
+[cp.kill]: https://nodejs.org/api/child_process.html#child_process_child_kill_signal
+
 
 ### Options
 

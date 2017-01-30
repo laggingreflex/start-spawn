@@ -1,11 +1,11 @@
-// const defaultKillSig = 'SIGTERM';
-const defaultKillSig = 'SIGINT';
+const defaultKillSig = 'SIGTERM';
 
 module.exports = (cmd, args, opts) => {
   const { platform } = require('os');
   const { join } = require('path');
   const { cwd } = process;
   const crossSpawn = require('cross-spawn-promise')
+  const defaultKiller = require('tree-kill');
 
   let cleanup = () => Promise.resolve();
 
@@ -107,7 +107,6 @@ module.exports = (cmd, args, opts) => {
             }
           }
         }).then(removeListeners);
-        const defaultKiller = (pid, sig) => cp.kill(sig);
         cleanup = (argKillSig, argKiller) => {
           postCleanup = true;
           return new Promise((resolve, reject) => {
