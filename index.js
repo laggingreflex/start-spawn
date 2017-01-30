@@ -110,40 +110,41 @@ module.exports = (cmd, args, opts) => {
         cleanup = (argKillSig, argKiller) => {
           postCleanup = true;
           return new Promise((resolve, reject) => {
-            const cb = (err) => {
-              if (err) {
-                reject(err);
-                removeListeners();
-              } else {
-                returnPromise.then(() => {
-                  resolve();
-                  removeListeners();
-                });
-              }
-            }
             let killPromise;
             const killer = argKiller || configurableKiller || defaultKiller;
             const killSig = argKillSig || configurableKillSig || defaultKillSig;
             const errMsg = `Couldn't kill ` + pidMsgStr;
             const sucMsg = 'Killed  ' + pidMsgStr;
+            const cb = (err) => {
+              if (err) {
+                log(errMsg + ' ' + err.message);
+              } else {
+                log(sucMsg);
+              }
+              return returnPromise.then(() => {
+                resolve();
+                removeListeners();
+              });
+            }
             try {
-              // log('Killing ' + pidMsgStr + '...');
+              // log('Killing ' + pidMsgStr);
               killPromise = killer(cp.pid, killSig, cb);
             } catch (err) {
-              err.message = errMsg + ' ' + err.message;
-              return reject(err);
+              log(errMsg + ' ' + err.message);
+              resolve();
+              removeListeners();
+              return;
             }
             if (killPromise && killPromise.then) {
               killPromise.then(() => returnPromise).then(() => {
                 log(sucMsg);
+              }).catch(err => {
+                log(errMsg + ' ' + err.message);
+              }).then(() => {
                 resolve();
                 removeListeners();
-              }).catch(err => {
-                err.message = errMsg + ' ' + err.message
-                reject(err);
-                removeListeners();
               });
-            } else if (!killer.length || killer.length < 3) {
+            } else {
               log(sucMsg);
               resolve();
               removeListeners();
