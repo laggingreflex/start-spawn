@@ -144,7 +144,7 @@ module.exports = (cmd, args, opts) => {
                 resolve();
                 removeListeners();
               });
-            } else {
+            } else if (killer && killer.length < 3) {
               log(sucMsg);
               resolve();
               removeListeners();
