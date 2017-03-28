@@ -161,7 +161,7 @@ module.exports = (cmd, args, opts) => {
   Object.defineProperty(task, 'kill', cleanupGetter);
 
   Object.defineProperty(task, 'killer', { set: (killer) => configurableKiller = killer });
-  Object.defineProperty(task, 'killSig', { set: (sig) => configurablekillSig = sig });
+  Object.defineProperty(task, 'killSig', { set: (sig) => configurableKillSig = sig });
 
   return task;
 
