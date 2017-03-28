@@ -130,16 +130,24 @@ module.exports = (cmd, args, opts) => {
               // log('Killing ' + pidMsgStr);
               killPromise = killer(cp.pid, killSig, cb);
             } catch (err) {
-              log(errMsg + ' ' + err.message);
-              resolve();
-              removeListeners();
-              return;
+              if (err.message.match(/not found/i)) {
+                // i.e. success
+              } else {
+                log(errMsg + ' ' + err.message);
+                resolve();
+                removeListeners();
+                return;
+              }
             }
             if (killPromise && killPromise.then) {
               killPromise.then(() => returnPromise).then(() => {
                 log(sucMsg);
               }).catch(err => {
-                log(errMsg + ' ' + err.message);
+                if (err.message.match(/not found/i)) {
+                  // i.e. success
+                } else {
+                  log(errMsg + ' ' + err.message);
+                }
               }).then(() => {
                 resolve();
                 removeListeners();
